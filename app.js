@@ -232,6 +232,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chkDemoMode) chkDemoMode.checked = isDemoMode;
     }
 
+    function updateCounts() {
+        const countAll = document.getElementById('countAll');
+        const countPending = document.getElementById('countPending');
+        const countChanges = document.getElementById('countChanges');
+        const countApproved = document.getElementById('countApproved');
+        const countPublished = document.getElementById('countPublished');
+        const countDraft = document.getElementById('countDraft');
+
+        if (countAll) countAll.textContent = posts.length;
+        if (countPending) countPending.textContent = posts.filter(p => p.status === 'pending').length;
+        if (countChanges) countChanges.textContent = posts.filter(p => p.status === 'changes_requested').length;
+        if (countApproved) countApproved.textContent = posts.filter(p => p.status === 'approved').length;
+        if (countPublished) countPublished.textContent = posts.filter(p => p.status === 'published').length;
+        if (countDraft) countDraft.textContent = posts.filter(p => p.status === 'draft').length;
+    }
+
     function dataURLtoBlob(dataurl) {
         const arr = dataurl.split(',');
         const mime = arr[0].match(/:(.*?);/)[1];
@@ -973,10 +989,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmPublish = confirm(`以下の投稿をInstagramへ即時公開しますか？\n\nタイトル: ${post.title}`);
         if (!confirmPublish) return;
 
-        // 設定の取得
-        const igAccountId = localStorage.getItem('instacheck_ig_account_id');
-        const igAccessToken = localStorage.getItem('instacheck_ig_access_token');
-        const isDemoMode = localStorage.getItem('instacheck_demo_mode') !== 'false';
+        // 設定の取得 (ローカルストレージの値を読み込み、空文字やデモ用初期値の場合は埋め込み設定を適用)
+        let storedId = localStorage.getItem('instacheck_ig_account_id');
+        let storedToken = localStorage.getItem('instacheck_ig_access_token');
+
+        if (!storedId || storedId.trim() === '' || storedId === 'null' || storedId === 'undefined' || storedId === '17841400000000000 (デモ)' || storedId === '17841400000000000') {
+            storedId = null;
+        }
+        if (!storedToken || storedToken.trim() === '' || storedToken === 'null' || storedToken === 'undefined' || storedToken === 'dummy_access_token_demo_12345') {
+            storedToken = null;
+        }
+
+        const igAccountId = storedId || EMBEDDED_CONFIG.igAccountId;
+        const igAccessToken = storedToken || EMBEDDED_CONFIG.igAccessToken;
+
+        let isDemoMode = EMBEDDED_CONFIG.isDemoMode;
+        if (localStorage.getItem('instacheck_demo_mode') !== null) {
+            isDemoMode = localStorage.getItem('instacheck_demo_mode') !== 'false';
+        }
 
         if (!isDemoMode && (!igAccountId || !igAccessToken || igAccountId.includes('デモ') || igAccessToken.includes('demo'))) {
             alert('⚠️ 実際のAPI連携を行うには、API設定から正しい「Instagram Business Account ID」と「User Access Token」を入力し、設定を保存してください。');
