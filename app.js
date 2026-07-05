@@ -467,7 +467,9 @@ document.addEventListener('DOMContentLoaded', () => {
             openEditorModal(null);
         });
         btnCloseModal.addEventListener('click', closeEditorModal);
-        btnApiSettings.addEventListener('click', () => apiModal.classList.remove('hidden'));
+        if (btnApiSettings) {
+            btnApiSettings.addEventListener('click', () => apiModal.classList.remove('hidden'));
+        }
         btnCloseApiModal.addEventListener('click', () => apiModal.classList.add('hidden'));
         btnSaveApiSettings.addEventListener('click', () => {
             const igAccountId = document.getElementById('igAccountId').value.trim();
