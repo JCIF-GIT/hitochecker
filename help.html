@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マニュアル | InstaCheck Pro</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0c10;
+            --bg-dark-secondary: #12161f;
+            --bg-card: rgba(22, 28, 39, 0.6);
+            --border-dark: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(138, 43, 226, 0.3);
+            
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            --accent: #8a2be2;
+            --accent-glow: rgba(138, 43, 226, 0.4);
+            --gradient-accent: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+            
+            --status-draft: #9ca3af;
+            --status-pending: #f59e0b;
+            --status-approved: #10b981;
+            --status-published: #06b6d4;
+            --status-changes: #ef4444;
+            
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-bottom: 5rem;
+            overflow-x: hidden;
+        }
+
+        /* Background grids & glows */
+        .ambient-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
+            top: -150px;
+            left: -150px;
+            z-index: -1;
+            filter: blur(50px);
+            pointer-events: none;
+        }
+        .ambient-glow-2 {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(0,0,0,0) 70%);
+            bottom: -200px;
+            right: -200px;
+            z-index: -1;
+            filter: blur(60px);
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header block */
+        header {
+            margin-bottom: 3rem;
+            text-align: center;
+            position: relative;
+        }
+        .back-btn {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-dark-secondary);
+            border: 1px solid var(--border-dark);
+            color: var(--text-primary);
+            padding: 0.6rem 1.2rem;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+            transform: translateY(-50%) translateX(-3px);
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            background: linear-gradient(120deg, #f3f4f6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Glassmorphic Section Cards */
+        section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-md);
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        section h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border-bottom: 1px solid var(--border-dark);
+            padding-bottom: 0.75rem;
+        }
+
+        /* SVG Workflow Chart Styling */
+        .flow-diagram-container {
+            display: flex;
+            justify-content: center;
+            background: rgba(10, 12, 16, 0.5);
+            padding: 1.5rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(255,255,255,0.03);
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+        .flow-diagram {
+            width: 100%;
+            max-width: 760px;
+            height: auto;
+        }
+
+        /* Role cards styling */
+        .role-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .role-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-sm);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .role-card:hover {
+            border-color: rgba(138, 43, 226, 0.4);
+            background: rgba(138, 43, 226, 0.03);
+            transform: translateY(-3px);
+        }
+        .role-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .role-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .role-card li {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.4rem;
+        }
+        .role-card li::before {
+            content: "•";
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* Workflow Step Cards (Interactive/Accordion style) */
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .step-item {
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.01);
+            transition: all 0.3s ease;
+        }
+        .step-item.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.1);
+        }
+        .step-header {
+            padding: 1.25rem;
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+        .step-badge {
+            background: var(--gradient-accent);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            color: white;
+            margin-right: 0.75rem;
+            font-family: 'Outfit', sans-serif;
+        }
+        .step-title {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .step-icon-arrow {
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+            color: var(--text-secondary);
+        }
+        .step-item.active .step-icon-arrow {
+            transform: rotate(180deg);
+        }
+        .step-content {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-dark);
+            display: none;
+            background: rgba(10, 12, 16, 0.3);
+        }
+        .step-item.active .step-content {
+            display: block;
+        }
+        .step-content p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Mockup layout illustration inside help page */
+        .mockup-container {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            margin: 1rem 0;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+        }
+        .mockup-left {
+            flex: 1.2;
+        }
+        .mockup-right {
+            flex: 0.8;
+            background: #1b2230;
+            border: 1px solid var(--border-dark);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+        }
+        .mini-form-group {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 0.6rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .highlight-box {
+            border-left: 3px solid var(--accent);
+            padding-left: 0.75rem;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .alert-box {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            color: #fbbf24;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.6rem;
+            align-items: flex-start;
+        }
+
+        @media (max-width: 768px) {
+            .role-grid {
+                grid-template-columns: 1fr;
+            }
+            .mockup-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .mockup-right {
+                width: 100%;
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .back-btn {
+                position: relative;
+                transform: none;
+                left: auto;
+                top: auto;
+                display: inline-flex;
+                margin-bottom: 1.5rem;
+            }
+            header {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow"></div>
+    <div class="ambient-glow-2"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <a href="index.html" class="back-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                サイトに戻る
+            </a>
+            <h1>InstaCheck Pro 操作マニュアル</h1>
+            <p class="subtitle">自動投稿・承認ワークフローの完全ガイド</p>
+        </header>
+
+        <!-- 1. システム全体概要（イラスト付き） -->
+        <section id="overview">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                1. InstaCheck Pro のワークフロー
+            </h2>
+            <p>本システムは「作成者」による投稿作成から、「承認者」の確認および承認を経て、ワンクリックで本番のInstagramアカウントへの自動投稿（API送信）を可能にするリアルタイム同期型チェックツールです。</p>
+            
+            <!-- SVGビジュアルワークフロー図 -->
+            <div class="flow-diagram-container">
+                <svg class="flow-diagram" viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Flow nodes -->
+                    <!-- Node 1 -->
+                    <rect x="10" y="30" width="140" height="80" rx="8" fill="#1e1b4b" stroke="#8a2be2" stroke-width="1.5"/>
+                    <text x="80" y="65" fill="#f3f4f6" font-size="12" font-weight="bold" text-anchor="middle">✍️ 作成者の編集</text>
+                    <text x="80" y="85" fill="#9ca3af" font-size="10" text-anchor="middle">写真アップ・本文入力</text>
+                    <text x="80" y="100" fill="#a855f7" font-size="10" font-weight="bold" text-anchor="middle">➡ 承認申請へ</text>
+
+                    <!-- Arrow 1 -->
+                    <path d="M 160 70 L 190 70" stroke="#8a2be2" stroke-width="2" fill="none"/>
+                    <polygon points="190,70 182,65 182,75" fill="#8a2be2"/>
+
+                    <!-- Node 2 (Database) -->
+                    <rect x="200" y="30" width="150" height="80" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+                    <text x="275" y="65" fill="#f3f4f6" font-size="12" font-weight="bold" text-anchor="middle">☁️ Supabase 同期</text>
+                    <text x="275" y="85" fill="#9ca3af" font-size="10" text-anchor="middle">クラウド経由でリアルタイム</text>
+                    <text x="275" y="100" fill="#10b981" font-size="10" text-anchor="middle">スマホとPCが即時同期</text>
+
+                    <!-- Arrow 2 -->
+                    <path d="M 360 70 L 390 70" stroke="#10b981" stroke-width="2" fill="none"/>
+                    <polygon points="390,70 382,65 382,75" fill="#10b981"/>
+
+                    <!-- Node 3 -->
+                    <rect x="400" y="30" width="150" height="80" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+                    <text x="475" y="65" fill="#f3f4f6" font-size="12" font-weight="bold" text-anchor="middle">🛡️ 承認者のチェック</text>
+                    <text x="475" y="85" fill="#9ca3af" font-size="10" text-anchor="middle">実機サイズプレビューで</text>
+                    <text x="475" y="100" fill="#f59e0b" font-size="10" font-weight="bold" text-anchor="middle">内容承認/修正依頼</text>
+
+                    <!-- Arrow 3 -->
+                    <path d="M 560 70 L 590 70" stroke="#f59e0b" stroke-width="2" fill="none"/>
+                    <polygon points="590,70 582,65 582,75" fill="#f59e0b"/>
+
+                    <!-- Node 4 -->
+                    <rect x="600" y="30" width="150" height="80" rx="8" fill="#083344" stroke="#06b6d4" stroke-width="1.5"/>
+                    <text x="675" y="65" fill="#f3f4f6" font-size="12" font-weight="bold" text-anchor="middle">🚀 Instagram本番投稿</text>
+                    <text x="675" y="85" fill="#9ca3af" font-size="10" text-anchor="middle">Graph API を叩いて</text>
+                    <text x="675" y="100" fill="#06b6d4" font-size="10" font-weight="bold" text-anchor="middle">直接本番に即時公開</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- 2. 役割別の機能説明 -->
+        <section id="roles">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                2. 役割ごとの役割・機能
+            </h2>
+            <p>画面右上の「現在の視点」切り替えにより、それぞれの権限に合った操作パネルが表示されます。</p>
+
+            <div class="role-grid">
+                <div class="role-card">
+                    <h3>✍️ 作成者（クリエイター）</h3>
+                    <ul>
+                        <li>新規の投稿作成（写真選択・キャプション入力）</li>
+                        <li>ハッシュタグのセットからワンクリック挿入</li>
+                        <li>「下書き保存」による一時保存</li>
+                        <li>承認者への「承認申請を出す（提出）」処理</li>
+                        <li>※ 承認完了した投稿は作成者から編集不可になります</li>
+                    </ul>
+                </div>
+                <div class="role-card">
+                    <h3>🛡️ 承認者（クライアント / 代理店長）</h3>
+                    <ul>
+                        <li>承認申請された投稿（「承認待ち」リスト）の確認</li>
+                        <li>実機サイズでの文字切れや写真構図のダブルチェック</li>
+                        <li>修正依頼（理由コメントを入力して差し戻し）</li>
+                        <li>投稿の承認処理</li>
+                        <li>「Instagramへ今すぐ投稿」による本番への直接公開</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 詳細な使い方ステップ -->
+        <section id="steps">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 8 12 12 16"/><line x1="16" y1="12" x2="8" y2="12"/></svg>
+                3. 操作ガイド（作成から本番投稿まで）
+            </h2>
+            
+            <div class="step-list">
+                <!-- Step 1 -->
+                <div class="step-item active">
+                    <div class="step-header" onclick="toggleStep(this)">
+                        <div class="step-title">
+                            <span class="step-badge">STEP 1</span>
+                            投稿を編集する
+                        </div>
+                        <span class="step-icon-arrow">▼</span>
+                    </div>
+                    <div class="step-content">
+                        <p>作成者視点で「新規投稿作成」を開き、必要な情報をすべて記入します。</p>
+                        <div class="mockup-container">
+                            <div class="mockup-left">
+                                <div class="mini-form-group"><strong>管理用タイトル:</strong> 7月キャンペーン告知 など</div>
+                                <div class="mini-form-group"><strong>Instagramキャプション:</strong> 本文を入力します。右側の文字数カウンターが「2200文字以下」であることを確認してください。</div>
+                                <div class="mini-form-group"><strong>画像アップロード:</strong> ローカルから選択。ドラッグ＆ドロップでも追加できます。複数登録するとスライド（カルーセル）になります。</div>
+                            </div>
+                            <div class="mockup-right">
+                                <div style="font-size:0.75rem; text-align:center; color:var(--text-secondary); border-bottom:1px solid #334155; padding-bottom:0.25rem; margin-bottom:0.5rem;">📱 実機プレビュー</div>
+                                <div style="width:100%; height:80px; background:#475569; border-radius:4px; margin-bottom:0.4rem; display:flex; align-items:center; justify-content:center; font-size:0.7rem;">[ 選択された写真 ]</div>
+                                <div style="font-size:0.65rem; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">本文プレビューがここにリアルタイムで反映...</div>
+                            </div>
+                        </div>
+                        <div class="highlight-box">
+                            💡 <strong>ハッシュタグ挿入:</strong> よく使うタグのセット（「ブランド共通」など）を選択して「タグをキャプション末尾に挿入」をクリックすると、自動で本文の最後に追加されます。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-item">
+                    <div class="step-header" onclick="toggleStep(this)">
+                        <div class="step-title">
+                            <span class="step-badge">STEP 2</span>
+                            承認申請を出す
+                        </div>
+                        <span class="step-icon-arrow">▼</span>
+                    </div>
+                    <div class="step-content">
+                        <p>作成した投稿は、承認者の確認をとるために「申請」処理を行います。</p>
+                        <div class="mini-form-group" style="border-left:3px solid var(--status-pending); padding-left:1rem;">
+                            <strong>モーダル下部の「承認申請を出す 🚀」をクリックします。</strong>
+                        </div>
+                        <p>申請された投稿は自動的にステータスが「承認待ち」となり、サイドバーの「承認待ち」カテゴリーに移動します。</p>
+                        <div class="highlight-box">
+                            💡 <strong>リアルタイム同期:</strong> クラウド上で即時に状態が保存されるため、PCで「承認申請」ボタンを押した瞬間に、スマホ側の承認画面にも通知なしで新規の「承認待ち」投稿が追加されます。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-item">
+                    <div class="step-header" onclick="toggleStep(this)">
+                        <div class="step-title">
+                            <span class="step-badge">STEP 3</span>
+                            チェック・承認（承認者）
+                        </div>
+                        <span class="step-icon-arrow">▼</span>
+                    </div>
+                    <div class="step-content">
+                        <p>承認者は、申請された内容が公開に適しているか最終チェックをします。</p>
+                        <p>視点を「🛡️ 承認者」に切り替え、対象の投稿を開きます。</p>
+                        <div class="role-grid" style="margin: 1rem 0;">
+                            <div style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.1); padding:0.8rem; border-radius:4px; font-size:0.8rem;">
+                                <strong style="color:var(--status-changes);">⚠️ 修正してほしい場合:</strong><br>
+                                下部のコメント欄に「テキストの誤字を直してください」など指示を書き、<strong>「修正依頼をする ⚠️」</strong> をクリックします。ステータスは「修正依頼中」に変わり、作成者にフィードバックされます。
+                            </div>
+                            <div style="background:rgba(16, 185, 129, 0.05); border:1px solid rgba(16, 185, 129, 0.1); padding:0.8rem; border-radius:4px; font-size:0.8rem;">
+                                <strong style="color:var(--status-approved);">✅ 承認して公開OKな場合:</strong><br>
+                                <strong>「投稿を承認する ✅」</strong> をクリックします。これで投稿は「承認済み」となり、本番公開が可能になります。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="step-item">
+                    <div class="step-header" onclick="toggleStep(this)">
+                        <div class="step-title">
+                            <span class="step-badge">STEP 4</span>
+                            Instagramへ本番公開する
+                        </div>
+                        <span class="step-icon-arrow">▼</span>
+                    </div>
+                    <div class="step-content">
+                        <p>承認された投稿は、承認者または管理者の手によって、本番のInstagramフィードへ送信・公開します。</p>
+                        <div class="mini-form-group" style="background:rgba(6, 182, 212, 0.08); border-left:3px solid var(--status-published); padding-left:1rem; color:#22d3ee;">
+                            <strong>1. 「承認済み」の投稿を開きます。</strong><br>
+                            <strong>2. 画面の右下にある、赤紫色の「Instagramへ今すぐ投稿 🚀」をクリックします。</strong>
+                        </div>
+                        <p>クリック後、API処理が開始されます（画像のアップロード・公開コンテナの作成が走り、数秒間「投稿処理中... ⏳」と表示されます）。</p>
+                        <p>「自動投稿が正常に完了しました！」とポップアップが出れば、<strong>実際にあなたの公式Instagramフィードに投稿が公開されています。</strong></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. よくある質問 (一般ユーザー向け) -->
+        <section id="faq">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                4. よくある質問 (一般ユーザー向け)
+            </h2>
+            
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+                <div>
+                    <strong style="color:var(--accent);">Q. PCで作成した「承認待ち」の投稿が、スマホで見えません</strong>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.25rem;">投稿データはオンラインデータベース（Supabase）を通じてすべてのデバイスでリアルタイム同期されます。もし反映されない場合は、インターネットの接続状態を確認し、ページを一度再読み込み（リロード）してみてください。</p>
+                </div>
+                <div>
+                    <strong style="color:var(--accent);">Q. 「修正依頼」が届いた投稿は、どのように修正して再申請すれば良いですか？</strong>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.25rem;">作成者視点に切り替えて「修正依頼中」リストから対象 of 投稿を開きます。右下のコメント欄に承認者からの差し戻し理由（例：「本文の誤字を直してください」など）が表示されています。内容を修正した後、再度「承認申請を出す 🚀」をクリックすると再申請が行われます。</p>
+                </div>
+                <div>
+                    <strong style="color:var(--accent);">Q. 承認が完了した（「承認済み」になった）投稿を、作成者から変更することはできますか？</strong>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.25rem;">誤送信や重複承認を防ぐため、一度「承認済み」または「投稿完了」になった投稿は、作成者画面からは編集できない（読み取り専用）安全仕様になっています。修正したい場合は、承認者側の画面から「修正依頼」にステータスを戻してもらってください。</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function toggleStep(element) {
+            const stepItem = element.parentElement;
+            const isActive = stepItem.classList.contains('active');
+            
+            // 全てのステップを一度閉じる
+            document.querySelectorAll('.step-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // クリックされたものがアクティブでなかった場合のみ開く
+            if (!isActive) {
+                stepItem.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
