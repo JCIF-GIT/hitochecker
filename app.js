@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initApp() {
         loadPosts();
         loadTagSets();
+        loadApiSettings();
         setupEventListeners();
         render();
     }
@@ -191,6 +192,55 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.warn('LocalStorage tagsets error', e);
         }
+    }
+
+    function loadApiSettings() {
+        const igAccountId = localStorage.getItem('instacheck_ig_account_id') || '17841400000000000 (デモ)';
+        const igAccessToken = localStorage.getItem('instacheck_ig_access_token') || 'dummy_access_token_demo_12345';
+        const isDemoMode = localStorage.getItem('instacheck_demo_mode') !== 'false';
+
+        const igAccountIdInput = document.getElementById('igAccountId');
+        const igAccessTokenInput = document.getElementById('igAccessToken');
+        const chkDemoMode = document.getElementById('chkDemoMode');
+
+        if (igAccountIdInput) igAccountIdInput.value = igAccountId;
+        if (igAccessTokenInput) igAccessTokenInput.value = igAccessToken;
+        if (chkDemoMode) chkDemoMode.checked = isDemoMode;
+    }
+
+    function dataURLtoBlob(dataurl) {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    }
+
+    async function uploadToTemporaryHost(base64Data) {
+        const blob = dataURLtoBlob(base64Data);
+        const formData = new FormData();
+        formData.append('file', blob, `image_${Date.now()}.jpg`);
+
+        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('画像アップロードサーバーへの通信に失敗しました。');
+        }
+
+        const resJson = await response.json();
+        if (resJson.status !== 'success' || !resJson.data || !resJson.data.url) {
+            throw new Error('画像サーバーの応答が不正です。');
+        }
+
+        // 表示用URLをダイレクトダウンロード用のURL(dl/)に変換
+        return resJson.data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
     }
 
     function renderTagSets() {
@@ -287,6 +337,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btnApiSettings.addEventListener('click', () => apiModal.classList.remove('hidden'));
         btnCloseApiModal.addEventListener('click', () => apiModal.classList.add('hidden'));
         btnSaveApiSettings.addEventListener('click', () => {
+            const igAccountId = document.getElementById('igAccountId').value.trim();
+            const igAccessToken = document.getElementById('igAccessToken').value.trim();
+            const isDemoMode = document.getElementById('chkDemoMode').checked;
+
+            localStorage.setItem('instacheck_ig_account_id', igAccountId);
+            localStorage.setItem('instacheck_ig_access_token', igAccessToken);
+            localStorage.setItem('instacheck_demo_mode', isDemoMode);
+
             alert('API連携設定を保存しました。');
             apiModal.classList.add('hidden');
         });
@@ -882,8 +940,8 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(msg);
     }
 
-    // Instagram即時投稿シミュレーション
-    function handlePublishToInstagram() {
+    // Instagramへの投稿処理 (デモモード / 実際のAPI連携)
+    async function handlePublishToInstagram() {
         if (!activePostId) return;
         const post = posts.find(p => p.id === activePostId);
         if (!post) return;
@@ -891,40 +949,211 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmPublish = confirm(`以下の投稿をInstagramへ即時公開しますか？\n\nタイトル: ${post.title}`);
         if (!confirmPublish) return;
 
-        // APIシミュレーション処理
+        // 設定の取得
+        const igAccountId = localStorage.getItem('instacheck_ig_account_id');
+        const igAccessToken = localStorage.getItem('instacheck_ig_access_token');
+        const isDemoMode = localStorage.getItem('instacheck_demo_mode') !== 'false';
+
+        if (!isDemoMode && (!igAccountId || !igAccessToken || igAccountId.includes('デモ') || igAccessToken.includes('demo'))) {
+            alert('⚠️ 実際のAPI連携を行うには、API設定から正しい「Instagram Business Account ID」と「User Access Token」を入力し、設定を保存してください。');
+            return;
+        }
+
         btnPublishNow.disabled = true;
         btnPublishNow.textContent = '投稿処理中... ⏳';
 
-        setTimeout(() => {
-            post.status = 'published';
+        if (isDemoMode) {
+            // シミュレーションモード
+            setTimeout(() => {
+                post.status = 'published';
 
-            // インサイト数値のシミュレーション生成
-            if (!post.insights) {
-                const reach = Math.floor(Math.random() * 15000) + 5000;
-                const impressions = Math.floor(reach * (1.2 + Math.random() * 0.4));
-                const saved = Math.floor(reach * (0.03 + Math.random() * 0.04));
-                const likes = Math.floor(reach * (0.05 + Math.random() * 0.08));
-                post.insights = { reach, impressions, saved, likes };
+                if (!post.insights) {
+                    const reach = Math.floor(Math.random() * 15000) + 5000;
+                    const impressions = Math.floor(reach * (1.2 + Math.random() * 0.4));
+                    const saved = Math.floor(reach * (0.03 + Math.random() * 0.04));
+                    const likes = Math.floor(reach * (0.05 + Math.random() * 0.08));
+                    post.insights = { reach, impressions, saved, likes };
+                }
+
+                post.comments = post.comments || [];
+                post.comments.push({
+                    id: 'c-' + Date.now(),
+                    author: 'システム (Instagram Graph API / デモモード)',
+                    role: 'system',
+                    text: '🚀 Instagram Graph API経由で正常に投稿が公開されました (Media ID: 179983940120391)',
+                    actionStatus: 'published',
+                    time: 'たった今'
+                });
+
+                savePosts();
+                render();
+                btnPublishNow.disabled = false;
+                btnPublishNow.textContent = 'Instagramへ今すぐ投稿 🚀';
+                closeEditorModal();
+
+                alert('✨ [デモモード] Instagramへの模擬投稿が正常に完了しました！');
+            }, 1200);
+            return;
+        }
+
+        // --- 本番API送信フロー ---
+        try {
+            const images = post.images || [];
+            if (images.length === 0) {
+                throw new Error('投稿する画像が登録されていません。');
             }
+
+            btnPublishNow.textContent = '画像アップロード中... ⏳';
+
+            // 1. 画像のパブリックURL化
+            const publicImageUrls = [];
+            for (let i = 0; i < images.length; i++) {
+                const img = images[i];
+                if (img.startsWith('http://') || img.startsWith('https://')) {
+                    publicImageUrls.push(img);
+                } else if (img.startsWith('data:image/')) {
+                    btnPublishNow.textContent = `画像アップロード中 (${i + 1}/${images.length})... ⏳`;
+                    const publicUrl = await uploadToTemporaryHost(img);
+                    publicImageUrls.push(publicUrl);
+                } else {
+                    throw new Error('画像のデータ形式が不正です。');
+                }
+            }
+
+            btnPublishNow.textContent = 'コンテナ作成中... ⏳';
+
+            let publishedMediaId = '';
+
+            if (publicImageUrls.length === 1) {
+                // --- 単一画像の投稿 ---
+                // A. メディアコンテナ作成
+                const createRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_url: publicImageUrls[0],
+                        caption: post.caption,
+                        access_token: igAccessToken
+                    })
+                });
+
+                const createData = await createRes.json();
+                if (createData.error) {
+                    throw new Error(createData.error.message || 'コンテナ作成に失敗しました。');
+                }
+
+                const creationId = createData.id;
+
+                btnPublishNow.textContent = '投稿公開中... ⏳';
+
+                // B. メディア公開
+                const publishRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        creation_id: creationId,
+                        access_token: igAccessToken
+                    })
+                });
+
+                const publishData = await publishRes.json();
+                if (publishData.error) {
+                    throw new Error(publishData.error.message || 'メディアの公開に失敗しました。');
+                }
+
+                publishedMediaId = publishData.id;
+
+            } else {
+                // --- 複数画像（カルーセル）の投稿 ---
+                // A. 各画像のアイテムコンテナ作成
+                const itemIds = [];
+                for (let i = 0; i < publicImageUrls.length; i++) {
+                    btnPublishNow.textContent = `画像コンテナ作成中 (${i + 1}/${publicImageUrls.length})... ⏳`;
+                    const itemRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image_url: publicImageUrls[i],
+                            is_carousel_item: true,
+                            access_token: igAccessToken
+                        })
+                    });
+
+                    const itemData = await itemRes.json();
+                    if (itemData.error) {
+                        throw new Error(itemData.error.message || `画像 ${i + 1} のコンテナ作成に失敗しました。`);
+                    }
+                    itemIds.push(itemData.id);
+                }
+
+                btnPublishNow.textContent = 'カルーセルコンテナ作成中... ⏳';
+
+                // B. カルーセル親コンテナ作成
+                const carouselRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        media_type: 'CAROUSEL',
+                        children: itemIds.join(','),
+                        caption: post.caption,
+                        access_token: igAccessToken
+                    })
+                });
+
+                const carouselData = await carouselRes.json();
+                if (carouselData.error) {
+                    throw new Error(carouselData.error.message || 'カルーセルコンテナの作成に失敗しました。');
+                }
+
+                const creationId = carouselData.id;
+
+                btnPublishNow.textContent = '投稿公開中... ⏳';
+
+                // C. メディア公開
+                const publishRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        creation_id: creationId,
+                        access_token: igAccessToken
+                    })
+                });
+
+                const publishData = await publishRes.json();
+                if (publishData.error) {
+                    throw new Error(publishData.error.message || 'カルーセルメディアの公開に失敗しました。');
+                }
+
+                publishedMediaId = publishData.id;
+            }
+
+            // 成功時の処理
+            post.status = 'published';
+            post.insights = { reach: 0, impressions: 0, saved: 0, likes: 0 }; // 新規投稿のため0初期化
 
             post.comments = post.comments || [];
             post.comments.push({
                 id: 'c-' + Date.now(),
                 author: 'システム (Instagram Graph API)',
                 role: 'system',
-                text: '🚀 Instagram Graph API経由で正常に投稿が公開されました (Media ID: 179983940120391)',
+                text: `🚀 Instagramへの自動投稿が正常に完了しました (Media ID: ${publishedMediaId})`,
                 actionStatus: 'published',
                 time: 'たった今'
             });
 
             savePosts();
             render();
-            btnPublishNow.disabled = false;
-            btnPublishNow.textContent = 'Instagramへ今すぐ投稿 🚀';
             closeEditorModal();
 
-            alert('✨ Instagramへの投稿が正常に完了しました！分析インサイトデータが生成されました。');
-        }, 1200);
+            alert('✨ Instagramへの自動投稿が正常に完了しました！実際に公開されています。');
+
+        } catch (error) {
+            console.error('API integration error:', error);
+            alert(`❌ Instagramへの投稿中にエラーが発生しました:\n${error.message}`);
+        } finally {
+            btnPublishNow.disabled = false;
+            btnPublishNow.textContent = 'Instagramへ今すぐ投稿 🚀';
+        }
     }
 
     // 削除処理
