@@ -3,6 +3,15 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // === 埋め込み用API連携設定 (全デバイス共有用) ===
+    // 複数デバイスで設定を共有するために、サイト自体に認証情報を埋め込む場合は以下を設定してください。
+    // (※注意: GitHubなどのパブリックリポジトリにアップロードすると、第三者に認証情報が見える状態になります。共有時はプライベートリポジトリをご利用ください)
+    const EMBEDDED_CONFIG = {
+        igAccountId: '17841417751256431',     // ここに Instagram Business Account ID を設定 (例: '17841400000000000')
+        igAccessToken: 'EAATOXqb0ebIBR9gyiwZCBcFaEmhPhiW7uQfkwoUAaWitZC7UzGRAHl71PCc1yyZCbh4P2tOzIRcfSfj0CUXMmwCD8MFoIVVBIbIBoZC9kZBX8yIlrNcEkHD3gcZByk6vQVqZAEqvPYpGuqW94zy8zUME3ZBZCwkavN0V7FZAAHm5Ge3bw3ZBjyGi3vJcjYEDWcv',   // ここに アクセストークン を設定 (例: 'EAABsb...')
+        isDemoMode: false     // 実際に稼働させる場合は false に設定
+    };
+
     // 状態管理
     let posts = [];
     let tagSets = [];
@@ -195,9 +204,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadApiSettings() {
-        const igAccountId = localStorage.getItem('instacheck_ig_account_id') || '17841400000000000 (デモ)';
-        const igAccessToken = localStorage.getItem('instacheck_ig_access_token') || 'dummy_access_token_demo_12345';
-        const isDemoMode = localStorage.getItem('instacheck_demo_mode') !== 'false';
+        let storedId = localStorage.getItem('instacheck_ig_account_id');
+        let storedToken = localStorage.getItem('instacheck_ig_access_token');
+
+        // デモ用デフォルト値の場合は無視して埋め込み設定を優先する
+        if (storedId === '17841400000000000 (デモ)' || storedId === '17841400000000000') {
+            storedId = null;
+        }
+        if (storedToken === 'dummy_access_token_demo_12345') {
+            storedToken = null;
+        }
+
+        const igAccountId = storedId || EMBEDDED_CONFIG.igAccountId || '17841400000000000 (デモ)';
+        const igAccessToken = storedToken || EMBEDDED_CONFIG.igAccessToken || 'dummy_access_token_demo_12345';
+        
+        let isDemoMode = EMBEDDED_CONFIG.isDemoMode;
+        if (localStorage.getItem('instacheck_demo_mode') !== null) {
+            isDemoMode = localStorage.getItem('instacheck_demo_mode') !== 'false';
+        }
 
         const igAccountIdInput = document.getElementById('igAccountId');
         const igAccessTokenInput = document.getElementById('igAccessToken');
