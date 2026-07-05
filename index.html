@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InstaCheck Pro - Instagram投稿承認＆自動管理システム</title>
+    <meta name="description" content="Instagram投稿前のチーム承認ワークフロー、リアルタイムプレビュー、自動投稿管理システム">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        (function() {
+            try {
+                if (sessionStorage.getItem('instacheck_authenticated') === 'true') {
+                    document.documentElement.classList.add('authenticated');
+                }
+            } catch (e) {
+                console.warn('sessionStorage access denied:', e);
+            }
+        })();
+    </script>
+</head>
+<body class="theme-dark">
+    <!-- パスワード保護画面 -->
+    <div id="passwordOverlay" class="password-overlay">
+        <div class="password-card">
+            <div class="password-logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <span class="brand-name">InstaCheck</span>
+                    <span class="brand-badge">PRO</span>
+                </div>
+            </div>
+            <p class="password-instruction">このシステムにアクセスするにはパスワードが必要です。</p>
+            <form id="passwordForm">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <input type="password" id="pagePassword" placeholder="パスワードを入力してください" required autofocus style="width: 100%; text-align: center; font-size: 1rem; padding: 0.8rem;">
+                </div>
+                <div id="passwordError" class="password-error hidden" style="color: var(--status-changes); font-size: 0.8rem; margin-top: 0.5rem; text-align: center;">パスワードが正しくありません。</div>
+                <button type="submit" class="btn btn-instagram" style="width: 100%; margin-top: 1rem; padding: 0.8rem; font-size: 0.95rem;">認証する 🔓</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const passwordOverlay = document.getElementById('passwordOverlay');
+            if (!passwordOverlay) return;
+
+            const passwordForm = document.getElementById('passwordForm');
+            const pagePasswordInput = document.getElementById('pagePassword');
+            const passwordError = document.getElementById('passwordError');
+
+            passwordForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const enteredPassword = pagePasswordInput.value.trim();
+                
+                if (enteredPassword === 'hito2026') {
+                    try {
+                        sessionStorage.setItem('instacheck_authenticated', 'true');
+                    } catch (err) {
+                        console.warn('sessionStorage is not available:', err);
+                    }
+                    
+                    document.documentElement.classList.add('authenticated');
+                    
+                    // スムーズなアニメーションを伴って非表示にする
+                    passwordOverlay.style.transition = 'opacity 0.4s ease, transform 0.4s ease, visibility 0.4s';
+                    passwordOverlay.style.opacity = '0';
+                    passwordOverlay.style.transform = 'scale(1.05)';
+                    passwordOverlay.style.visibility = 'hidden';
+                    
+                    setTimeout(function() {
+                        passwordOverlay.style.display = 'none';
+                    }, 400);
+                } else {
+                    passwordError.classList.remove('hidden');
+                    pagePasswordInput.classList.add('error');
+                    pagePasswordInput.value = '';
+                    pagePasswordInput.focus();
+
+                    const card = passwordOverlay.querySelector('.password-card');
+                    if (card) {
+                        card.classList.add('shake');
+                        setTimeout(function() {
+                            card.classList.remove('shake');
+                        }, 500);
+                    }
+                }
+            });
+
+            pagePasswordInput.addEventListener('input', function() {
+                passwordError.classList.add('hidden');
+                pagePasswordInput.classList.remove('error');
+            });
+        })();
+    </script>
+
+    <!-- アプリケーションヘッダー -->
+    <header class="app-header">
+        <div class="logo-container">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <span class="brand-name">InstaCheck</span>
+                <span class="brand-badge">PRO</span>
+            </div>
+        </div>
+
+        <!-- 役割切替シミュレーター & フィルター -->
+        <div class="header-actions">
+            <div class="role-selector-wrapper">
+                <span class="role-label">現在の視点:</span>
+                <select id="roleSelector" class="role-select">
+                    <option value="creator" selected>📝 投稿作成者 (担当者)</option>
+                    <option value="reviewer">🛡️ 承認者 (マネージャー/クライアント)</option>
+                </select>
+            </div>
+
+            <button id="btnTagSettings" class="btn btn-secondary btn-icon-text">
+                🏷️ タグセット管理
+            </button>
+
+            <button id="btnApiSettings" class="btn btn-secondary btn-icon-text">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                API連携設定
+            </button>
+
+            <button id="btnNewPost" class="btn btn-primary btn-icon-text">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                新規投稿作成
+            </button>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ領域 -->
+    <main class="app-main">
+        <!-- サイドナビゲーション / ステータスフィルター -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">ワークフロー</h3>
+                <nav class="nav-menu">
+                    <button class="nav-item active" data-filter="all">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-text">すべての投稿</span>
+                        <span class="count-badge" id="countAll">0</span>
+                    </button>
+                    <button class="nav-item" data-filter="pending">
+                        <span class="nav-icon">⏳</span>
+                        <span class="nav-text">承認待ち</span>
+                        <span class="count-badge badge-warning" id="countPending">0</span>
+                    </button>
+                    <button class="nav-item" data-filter="changes_requested">
+                        <span class="nav-icon">⚠️</span>
+                        <span class="nav-text">修正依頼</span>
+                        <span class="count-badge badge-danger" id="countChanges">0</span>
+                    </button>
+                    <button class="nav-item" data-filter="approved">
+                        <span class="nav-icon">✅</span>
+                        <span class="nav-text">承認済み (投稿待機)</span>
+                        <span class="count-badge badge-success" id="countApproved">0</span>
+                    </button>
+                    <button class="nav-item" data-filter="published">
+                        <span class="nav-icon">🚀</span>
+                        <span class="nav-text">投稿完了</span>
+                        <span class="count-badge badge-info" id="countPublished">0</span>
+                    </button>
+                    <button class="nav-item" data-filter="draft">
+                        <span class="nav-icon">✏️</span>
+                        <span class="nav-text">下書き</span>
+                        <span class="count-badge badge-neutral" id="countDraft">0</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">アナリティクス</h3>
+                <nav class="nav-menu">
+                    <button class="nav-item" data-filter="analytics">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">パフォーマンス分析</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="sidebar-section account-info-card">
+                <div class="account-header">
+                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80" alt="Account Avatar" class="account-avatar">
+                    <div class="account-meta">
+                        <div class="account-name">Official Brand JS</div>
+                        <div class="account-handle">@official_brand_demo</div>
+                    </div>
+                </div>
+                <div class="account-status">
+                    <span class="status-dot online"></span>
+                    <span>Instagram Business Connected</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- メインコンテンツ領域 -->
+        <section class="content-area">
+            <div class="content-header">
+                <h1 class="page-title" id="pageTitle">すべての投稿</h1>
+                <div class="view-options" id="searchOptions">
+                    <input type="text" id="searchInput" placeholder="投稿文やタグで検索..." class="search-input">
+                </div>
+            </div>
+
+            <!-- 1. 投稿一覧ビュー -->
+            <div id="postsView">
+                <div id="postsGrid" class="posts-grid">
+                    <!-- JavaScriptで動的に生成 -->
+                </div>
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="empty-icon">📮</div>
+                    <h3>該当する投稿がありません</h3>
+                    <p>新しい投稿を作成するか、フィルターを変更してください。</p>
+                </div>
+            </div>
+
+            <!-- 2. パフォーマンス分析ダッシュボードビュー -->
+            <div id="analyticsView" class="analytics-dashboard hidden">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📊</div>
+                        <div class="kpi-data">
+                            <span class="kpi-label">総リーチ数 (アカウント計)</span>
+                            <span class="kpi-value" id="kpiTotalReach">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">💾</div>
+                        <div class="kpi-data">
+                            <span class="kpi-label">総保存数 (クオリティ指標)</span>
+                            <span class="kpi-value" id="kpiTotalSaved">0</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">📈</div>
+                        <div class="kpi-data">
+                            <span class="kpi-label">平均エンゲージメント率</span>
+                            <span class="kpi-value" id="kpiAvgEngRate">0%</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon">🚀</div>
+                        <div class="kpi-data">
+                            <span class="kpi-label">公開済み投稿数</span>
+                            <span class="kpi-value" id="kpiPublishedCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analytics-sections">
+                    <div class="analytics-card">
+                        <h3 class="analytics-card-title">🏆 保存数ランキング Top 3 (保存率の高い投稿)</h3>
+                        <div id="topSavedList" class="ranking-list">
+                            <!-- JS動的生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- モーダル: 投稿作成・編集 兼 プレビュー＆承認モーダル -->
+    <div id="postModal" class="modal-overlay hidden">
+        <div class="modal-container modal-lg">
+            <div class="modal-header">
+                <h2 id="modalTitle">新規投稿の作成</h2>
+                <button class="modal-close" id="btnCloseModal">&times;</button>
+            </div>
+            <div class="modal-body editor-layout">
+                <!-- 左側: 編集フォーム & 承認フィードバック -->
+                <div class="editor-pane">
+                    <form id="postForm" class="post-form">
+                        <input type="hidden" id="postId">
+                        
+                        <div class="form-group">
+                            <label for="postTitle">管理用タイトル / 件名</label>
+                            <input type="text" id="postTitle" placeholder="例: 7月キャンペーン告知第1弾" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="postImages">投稿画像 (複数選択可 / カルーセル)</label>
+                            <div class="file-dropzone" id="dropzone">
+                                <input type="file" id="postImages" accept="image/*" multiple class="file-input">
+                                <div class="dropzone-content">
+                                    <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="1.5" fill="none">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                        <polyline points="21 15 16 10 5 21"></polyline>
+                                    </svg>
+                                    <p>クリックまたはドラッグ＆ドロップで画像を追加</p>
+                                    <span class="help-text">JPG, PNG, WEBP対応 (最大10枚)</span>
+                                </div>
+                            </div>
+                            <!-- 画像サムネイル一覧 -->
+                            <div id="imageThumbnails" class="image-thumbnails-grid"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="label-with-badge">
+                                <label for="postCaption">Instagram キャプション (本文)</label>
+                                <span id="charCounter" class="char-counter">0 / 2200文字</span>
+                            </div>
+                            <!-- よく使うハッシュタグセットワンクリック挿入バー -->
+                            <div class="tag-selector-bar">
+                                <span class="tag-bar-label">🏷️ タグセットを挿入:</span>
+                                <div id="quickTagList" class="quick-tag-chips">
+                                    <!-- JavaScriptで動的生成 -->
+                                </div>
+                            </div>
+                            <textarea id="postCaption" rows="6" placeholder="キャプションを入力してください... #ハッシュタグ も自動認識されます" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="scheduledDate">予約投稿日時 (オプション)</label>
+                            <input type="datetime-local" id="scheduledDate">
+                        </div>
+
+                        <!-- Instagram Insights 分析パネル (投稿完了・承認済み時に表示) -->
+                        <div id="insightsSection" class="insights-section hidden">
+                            <h4 class="section-subtitle">📊 Instagram Insights 分析レポート</h4>
+                            <div class="insights-grid">
+                                <div class="insight-box">
+                                    <span class="ib-label">総リーチ数</span>
+                                    <span class="ib-value" id="valReach">0</span>
+                                </div>
+                                <div class="insight-box">
+                                    <span class="ib-label">インプレッション</span>
+                                    <span class="ib-value" id="valImpressions">0</span>
+                                </div>
+                                <div class="insight-box highlight">
+                                    <span class="ib-label">保存数</span>
+                                    <span class="ib-value" id="valSaved">0</span>
+                                </div>
+                                <div class="insight-box">
+                                    <span class="ib-label">いいね数</span>
+                                    <span class="ib-value" id="valLikes">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 承認者コメント・履歴表示セクション -->
+                        <div id="approvalCommentsSection" class="approval-comments-section">
+                            <h4 class="section-subtitle">💬 チームレビュー＆フィードバック履歴</h4>
+                            <div id="commentsList" class="comments-list">
+                                <!-- 動的に表示 -->
+                            </div>
+                            <div class="add-comment-box role-reviewer-only">
+                                <textarea id="newCommentInput" rows="2" placeholder="修正依頼やフィードバックコメントを入力..."></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 右側: Instagramリアルタイムプレビュー -->
+                <div class="preview-pane">
+                    <div class="preview-header-label">
+                        <span>📱 実機プレビュー表示</span>
+                        <span class="preview-type-badge">Instagram Feed</span>
+                    </div>
+
+                    <!-- スマホフレーム -->
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="phone-screen">
+                            <!-- Instagram App Header -->
+                            <div class="ig-header">
+                                <span class="ig-logo-text">Instagram</span>
+                                <div class="ig-header-icons">
+                                    <span>♡</span>
+                                    <span>💬</span>
+                                </div>
+                            </div>
+
+                            <!-- Instagram Post Component -->
+                            <div class="ig-post-card">
+                                <!-- Post User Info -->
+                                <div class="ig-user-bar">
+                                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80" class="ig-avatar" alt="Avatar">
+                                    <div class="ig-user-meta">
+                                        <span class="ig-username">official_brand_demo</span>
+                                        <span class="ig-location">Tokyo, Japan</span>
+                                    </div>
+                                    <span class="ig-more">•••</span>
+                                </div>
+
+                                <!-- Post Media Slider -->
+                                <div class="ig-media-wrapper" id="igMediaWrapper">
+                                    <div class="ig-media-placeholder">
+                                        <span>📷 画像を選択してください</span>
+                                    </div>
+                                </div>
+
+                                <!-- Post Action Bar -->
+                                <div class="ig-action-bar">
+                                    <div class="ig-action-left">
+                                        <span class="ig-icon">♡</span>
+                                        <span class="ig-icon">💬</span>
+                                        <span class="ig-icon">✈</span>
+                                    </div>
+                                    <span class="ig-icon">🔖</span>
+                                </div>
+
+                                <!-- Likes count -->
+                                <div class="ig-likes">
+                                    <span>いいね！ 1,248件</span>
+                                </div>
+
+                                <!-- Caption Preview -->
+                                <div class="ig-caption-area">
+                                    <span class="ig-username-bold">official_brand_demo</span>
+                                    <span id="igPreviewCaption" class="ig-caption-text">投稿キャプションがここにリアルタイムで表示されます。</span>
+                                </div>
+
+                                <div class="ig-time">たった今</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- モーダル フッターアクション（視点によってボタン切替） -->
+            <div class="modal-footer">
+                <div class="left-actions">
+                    <button id="btnDeletePost" class="btn btn-danger-outline hidden">削除</button>
+                </div>
+
+                <div class="right-actions">
+                    <!-- 作成者用ボタン -->
+                    <div id="creatorActionButtons" class="action-group">
+                        <button type="button" id="btnSaveDraft" class="btn btn-secondary">下書き保存</button>
+                        <button type="button" id="btnSubmitApproval" class="btn btn-warning">承認申請を出す 🚀</button>
+                    </div>
+
+                    <!-- 承認者用ボタン -->
+                    <div id="reviewerActionButtons" class="action-group hidden">
+                        <button type="button" id="btnRequestChanges" class="btn btn-danger">修正依頼を送信 ⚠️</button>
+                        <button type="button" id="btnApprove" class="btn btn-success">投稿を承認する ✅</button>
+                        <button type="button" id="btnPublishNow" class="btn btn-instagram hidden">Instagramへ今すぐ投稿 🚀</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API設定モーダル -->
+    <div id="apiModal" class="modal-overlay hidden">
+        <div class="modal-container modal-md">
+            <div class="modal-header">
+                <h2>Instagram Graph API 連携設定</h2>
+                <button class="modal-close" id="btnCloseApiModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">承認済みの投稿をInstagramへ自動投稿するためのMeta API認証情報です。（検証用のシミュレーションモードも利用可能です）</p>
+                
+                <div class="form-group">
+                    <label for="igAccountId">Instagram Business Account ID</label>
+                    <input type="text" id="igAccountId" placeholder="例: 17841400000000000" value="17841400000000000 (デモ)">
+                </div>
+
+                <div class="form-group">
+                    <label for="igAccessToken">User Access Token (Long-Lived)</label>
+                    <input type="password" id="igAccessToken" placeholder="EAABsb..." value="dummy_access_token_demo_12345">
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="chkDemoMode" checked>
+                        <span>デモシミュレーションモード（実APIを叩かずに模擬投稿完了）</span>
+                    </label>
+                </div>
+
+                <div class="api-status-box success">
+                    <span class="status-icon">✅</span>
+                    <div>
+                        <strong>API接続ステータス: 正常 (デモ動作中)</strong>
+                        <p>承認済み投稿の「Instagramへ今すぐ投稿」をクリックすると即時反映処理が行われます。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSaveApiSettings" class="btn btn-primary">設定を保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像高解像度拡大表示用ライトボックスモーダル -->
+    <div id="lightboxModal" class="modal-overlay hidden" style="z-index: 2000;">
+        <button class="lightbox-nav prev" id="lightboxPrev">&lt;</button>
+        <button class="lightbox-nav next" id="lightboxNext">&gt;</button>
+        <div class="lightbox-container">
+            <button class="lightbox-close" id="btnCloseLightbox">&times;</button>
+            <div class="lightbox-media-wrapper">
+                <img id="lightboxImage" src="" alt="拡大画像">
+            </div>
+            <div class="lightbox-caption" id="lightboxCaption">画像を高解像度で確認中</div>
+        </div>
+    </div>
+
+    <!-- ハッシュタグセット管理モーダル -->
+    <div id="tagModal" class="modal-overlay hidden">
+        <div class="modal-container modal-md">
+            <div class="modal-header">
+                <h2>🏷️ ハッシュタグセット管理</h2>
+                <button class="modal-close" id="btnCloseTagModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description" style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+                    よく使うハッシュタグをグループとして保存しておくと、投稿作成時にワンクリックで挿入できます。
+                </p>
+
+                <!-- 新規タグセット追加フォーム -->
+                <div class="tag-set-form-box" style="background:var(--bg-dark-card); padding:1rem; border-radius:var(--radius-md); margin-bottom:1.5rem; border:1px solid var(--border-dark);">
+                    <h4 style="font-size:0.9rem; margin-bottom:0.75rem;">➕ 新しいタグセットを作成</h4>
+                    <div class="form-group" style="margin-bottom:0.75rem;">
+                        <input type="text" id="newTagName" placeholder="セット名 (例: 店舗共通タグ, カフェグルメ)">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0.75rem;">
+                        <textarea id="newTagContent" rows="3" placeholder="ハッシュタグをスペース区切りで入力 (例: #cafe #tokyo #インスタ映え)"></textarea>
+                    </div>
+                    <button id="btnAddTagSet" class="btn btn-primary" style="width:100%;">タグセットを保存</button>
+                </div>
+
+                <!-- 既存タグセット一覧 -->
+                <h4 style="font-size:0.9rem; margin-bottom:0.75rem;">📋 登録済みタグセット一覧</h4>
+                <div id="registeredTagSetsList" class="registered-tag-list">
+                    <!-- JavaScriptで動的生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
