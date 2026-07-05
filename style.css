@@ -1318,6 +1318,166 @@ html.authenticated .password-overlay {
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
 }
 
+/* ==========================================
+   スマートフォン・タブレット向けレスポンシブ対応
+   ========================================== */
+
+/* タブレット・中画面端末 */
+@media (max-width: 992px) {
+    .editor-layout {
+        grid-template-columns: 1fr !important;
+        gap: 2rem !important;
+    }
+    .preview-pane {
+        margin-top: 1rem;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+/* スマートフォン端末 */
+@media (max-width: 768px) {
+    /* ヘッダーの縦並び化 */
+    .app-header {
+        height: auto !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 1.25rem !important;
+        gap: 1rem !important;
+    }
+    .logo-container {
+        justify-content: center;
+    }
+    .header-actions {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+    }
+    .role-selector-wrapper {
+        justify-content: space-between;
+        padding: 0.6rem 0.8rem;
+    }
+    .btn {
+        width: 100% !important;
+        padding: 0.75rem 1.2rem !important;
+    }
+
+    /* メインレイアウトの1カラム化 */
+    .app-main {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+    }
+
+    /* サイドバーを横スクロールメニューに変換 */
+    .sidebar {
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-dark) !important;
+        padding: 0.75rem 1rem !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 1rem !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        height: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .sidebar-section {
+        margin-bottom: 0 !important;
+    }
+    .sidebar-section:last-child {
+        display: none !important; /* モバイルではアカウント情報を非表示にして省スペース化 */
+    }
+    .sidebar-title {
+        display: none !important; /* セクション見出しを非表示 */
+    }
+    .nav-menu {
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+    }
+    .nav-item {
+        padding: 0.5rem 0.75rem !important;
+        width: auto !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    /* メインコンテンツ領域の調整 */
+    .content-area {
+        padding: 1.25rem !important;
+    }
+    .content-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 1rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+    .search-input {
+        width: 100% !important;
+    }
+
+    /* モーダル表示の最大化 */
+    .modal-overlay {
+        padding: 0.5rem !important;
+    }
+    .modal-container {
+        max-height: 96vh !important;
+        border-radius: var(--radius-md) !important;
+    }
+    .modal-header {
+        padding: 1rem !important;
+    }
+    .modal-body {
+        padding: 1rem !important;
+    }
+    .modal-footer {
+        flex-direction: column !important;
+        gap: 1rem !important;
+        padding: 1rem !important;
+    }
+    .modal-footer .left-actions,
+    .modal-footer .right-actions,
+    .modal-footer .action-group {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+
+    /* スマホ画面プレビューサイズ調整 */
+    .phone-frame {
+        width: 100% !important;
+        max-width: 290px !important;
+        height: 520px !important;
+    }
+    .ig-media-wrapper {
+        width: 270px !important;
+        height: 270px !important;
+    }
+
+    /* パフォーマンス分析（KPI）の調整 */
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.75rem !important;
+    }
+    .kpi-card {
+        padding: 0.75rem !important;
+    }
+    .kpi-value {
+        font-size: 1.15rem !important;
+    }
+    .ranking-item {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+    }
+    .ranking-metrics {
+        justify-content: space-between;
+    }
+}
+
 
 
 
