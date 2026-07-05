@@ -207,11 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let storedId = localStorage.getItem('instacheck_ig_account_id');
         let storedToken = localStorage.getItem('instacheck_ig_access_token');
 
-        // デモ用デフォルト値の場合は無視して埋め込み設定を優先する
-        if (storedId === '17841400000000000 (デモ)' || storedId === '17841400000000000') {
+        // デモ用デフォルト値、空文字、null/undefined文字列の場合は無視して埋め込み設定を優先する
+        if (!storedId || storedId.trim() === '' || storedId === 'null' || storedId === 'undefined' || storedId === '17841400000000000 (デモ)' || storedId === '17841400000000000') {
             storedId = null;
         }
-        if (storedToken === 'dummy_access_token_demo_12345') {
+        if (!storedToken || storedToken.trim() === '' || storedToken === 'null' || storedToken === 'undefined' || storedToken === 'dummy_access_token_demo_12345') {
             storedToken = null;
         }
 
