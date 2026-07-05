@@ -9,8 +9,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const EMBEDDED_CONFIG = {
         igAccountId: '17841417751256431',     // ここに Instagram Business Account ID を設定 (例: '17841400000000000')
         igAccessToken: 'EAATOXqb0ebIBR9gyiwZCBcFaEmhPhiW7uQfkwoUAaWitZC7UzGRAHl71PCc1yyZCbh4P2tOzIRcfSfj0CUXMmwCD8MFoIVVBIbIBoZC9kZBX8yIlrNcEkHD3gcZByk6vQVqZAEqvPYpGuqW94zy8zUME3ZBZCwkavN0V7FZAAHm5Ge3bw3ZBjyGi3vJcjYEDWcv',   // ここに アクセストークン を設定 (例: 'EAABsb...')
-        isDemoMode: false     // 実際に稼働させる場合は false に設定
+        isDemoMode: false,     // 実際に稼働させる場合は false に設定
+        // --- Supabase 接続設定 (複数デバイスリアルタイム同期用) ---
+        supabaseUrl: 'https://ixhyjgxshbgmbdfqacfg.supabase.co',
+        supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4aHlqZ3hzaGJnbWJkZnFhY2ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMTgyMzYsImV4cCI6MjA5ODc5NDIzNn0.rapV1AmpNZ8Klr90QM5EJnA_3IgeINCv3rO9ywFzVaA'
     };
+
+    // Supabase クライアントの初期化
+    let supabaseClient = null;
+    if (typeof supabase !== 'undefined' && EMBEDDED_CONFIG.supabaseUrl && EMBEDDED_CONFIG.supabaseKey) {
+        try {
+            supabaseClient = supabase.createClient(EMBEDDED_CONFIG.supabaseUrl, EMBEDDED_CONFIG.supabaseKey);
+        } catch (err) {
+            console.error('Supabase initialization failed:', err);
+        }
+    }
 
     // 状態管理
     let posts = [];
@@ -158,15 +171,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // アプリ初期化
     initApp();
 
-    function initApp() {
-        loadPosts();
+    async function initApp() {
+        await loadPosts();
         loadTagSets();
         loadApiSettings();
         setupEventListeners();
+        setupSupabaseRealtime();
         render();
     }
 
-    function loadPosts() {
+    async function loadPosts() {
+        if (supabaseClient) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('instacheck_posts')
+                    .select('*');
+
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    // 作成日時降順に並び替え
+                    posts = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                } else {
+                    // もしデータベースが空なら初期サンプルを挿入
+                    posts = [...initialSamplePosts];
+                    for (const post of posts) {
+                        await savePostToSupabase(post);
+                    }
+                }
+            } catch (err) {
+                console.error('Supabase load error:', err);
+                loadPostsFromLocalStorage();
+            }
+        } else {
+            loadPostsFromLocalStorage();
+        }
+    }
+
+    function loadPostsFromLocalStorage() {
         const stored = localStorage.getItem('instacheck_posts');
         if (stored) {
             try {
@@ -176,7 +217,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             posts = initialSamplePosts;
-            savePosts();
+            savePostsLocalStorage();
+        }
+    }
+
+    async function savePostToSupabase(post) {
+        if (supabaseClient) {
+            try {
+                const { error } = await supabaseClient
+                    .from('instacheck_posts')
+                    .upsert(post);
+                if (error) throw error;
+            } catch (err) {
+                console.error('Supabase save error:', err);
+            }
+        }
+    }
+
+    async function deletePostFromSupabase(postId) {
+        if (supabaseClient) {
+            try {
+                const { error } = await supabaseClient
+                    .from('instacheck_posts')
+                    .delete()
+                    .eq('id', postId);
+                if (error) throw error;
+            } catch (err) {
+                console.error('Supabase delete error:', err);
+            }
+        }
+    }
+
+    function setupSupabaseRealtime() {
+        if (supabaseClient) {
+            supabaseClient
+                .channel('schema-db-changes')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'instacheck_posts' },
+                    async () => {
+                        // データ変更時に再読み込みして描画
+                        await loadPosts();
+                        render();
+                    }
+                )
+                .subscribe();
         }
     }
 
@@ -335,11 +420,19 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLivePreview();
     }
 
-    function savePosts() {
+    function savePostsLocalStorage() {
         try {
             localStorage.setItem('instacheck_posts', JSON.stringify(posts));
         } catch (e) {
             console.warn('LocalStorage error (quota exceeded): storing in memory session only', e);
+        }
+    }
+
+    async function savePosts(updatedPost) {
+        savePostsLocalStorage();
+
+        if (supabaseClient && updatedPost) {
+            await savePostToSupabase(updatedPost);
         }
     }
 
@@ -881,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 保存・ステータス更新処理 (作成者)
-    function savePostWithStatus(targetStatus) {
+    async function savePostWithStatus(targetStatus) {
         const title = postTitleInput.value.trim();
         const caption = postCaptionInput.value.trim();
 
@@ -925,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
             posts.unshift(newPost);
         }
 
-        savePosts();
+        await savePosts(newPost);
 
         // 承認申請時は自動的に「承認待ち」または「すべて」のフィルターを表示
         if (targetStatus === 'pending') {
@@ -946,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 承認者アクション処理
-    function handleReviewerAction(targetStatus) {
+    async function handleReviewerAction(targetStatus) {
         if (!activePostId) return;
         const post = posts.find(p => p.id === activePostId);
         if (!post) return;
@@ -970,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        savePosts();
+        await savePosts(post);
         render();
         closeEditorModal();
 
@@ -1039,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     time: 'たった今'
                 });
 
-                savePosts();
+                await savePosts(post);
                 render();
                 btnPublishNow.disabled = false;
                 btnPublishNow.textContent = 'Instagramへ今すぐ投稿 🚀';
@@ -1195,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 time: 'たった今'
             });
 
-            savePosts();
+            await savePosts(post);
             render();
             closeEditorModal();
 
@@ -1211,11 +1304,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 削除処理
-    function handleDeletePost() {
+    async function handleDeletePost() {
         if (!activePostId) return;
         if (confirm('この投稿を削除してもよろしいですか？')) {
-            posts = posts.filter(p => p.id !== activePostId);
-            savePosts();
+            const deleteId = activePostId;
+            posts = posts.filter(p => p.id !== deleteId);
+            savePostsLocalStorage();
+            await deletePostFromSupabase(deleteId);
             render();
             closeEditorModal();
         }
