@@ -1111,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isDemoMode) {
             // シミュレーションモード
-            setTimeout(() => {
+            setTimeout(async () => {
                 post.status = 'published';
 
                 if (!post.insights) {
